@@ -19,10 +19,15 @@ def is_invalid_id_p2(num: int) -> bool:
         if length % sample_size != 0:
             continue
 
-        # repeat sample as often as it fits, then compare with initial id
-        repeated_sample = num_str[:sample_size] * (length // sample_size)
+        
+        # compare candidate of sample_size with the str up to each repetition of candidate
+        is_repeating = True
+        for i in range(sample_size, length, sample_size):
+            if num_str[i : i + sample_size] != num_str[:sample_size]:
+                is_repeating = False
+                break
 
-        if repeated_sample == num_str:
+        if is_repeating:
             return True
 
     return False
