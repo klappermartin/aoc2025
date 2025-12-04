@@ -1,6 +1,5 @@
 import argparse
 import sys
-from copy import copy
 
 
 def parse_input(input_data: str) -> list[list[int]]:
