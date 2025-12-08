@@ -1,6 +1,7 @@
 import argparse
 import sys
 from collections import deque
+from functools import cache
 
 
 def parse_input(input_data: str) -> list[list[str]]:
@@ -62,43 +63,29 @@ def get_n_splits(rows: list[list[str]]) -> int:
     return result
 
 
-# memoize the amount of paths that "emerge" from a given start position to speed up brute-force
-def count_paths_from_position(
-    rows: list[list[str]],
-    start_row_idx: int,
-    start_col_idx: int,
-    paths_from_pos: dict[tuple[int, int], int],
-) -> int:
-    # if steps path from position to end are known, skip re-compute
-    if (start_row_idx, start_col_idx) in paths_from_pos:
-        return paths_from_pos[(start_row_idx, start_col_idx)]
+def count_paths_from_position(rows: list[list[str]]) -> int:
+    @cache
+    def count_from(row_idx: int, col_idx: int) -> int:
+        # move down until split or grid exit
+        while row_idx < len(rows):
+            grid_value = rows[row_idx][col_idx]
 
-    current_row = start_row_idx
-    current_col = start_col_idx
+            # recursive call for both sides of splitter
+            if grid_value == "^":
+                paths_left = count_from(row_idx + 1, col_idx - 1)
+                paths_right = count_from(row_idx + 1, col_idx + 1)
+                return paths_left + paths_right
 
-    # for each row,
-    while current_row < len(rows):
-        grid_value = rows[current_row][current_col]
+            row_idx += 1
 
-        # split into 2 paths, recursive call for each
-        # then sum up and memoize paths from here
-        if grid_value == "^":
-            paths_left = count_paths_from_position(
-                rows, current_row + 1, current_col - 1, paths_from_pos
-            )
-            paths_right = count_paths_from_position(
-                rows, current_row + 1, current_col + 1, paths_from_pos
-            )
+        # exit grid - 1 path done
+        return 1
 
-            result = paths_left + paths_right
-            paths_from_pos[(start_row_idx, start_col_idx)] = result
-            return result
+    start = get_start_pos(rows)
+    if start is None:
+        raise ValueError("Start position not found, input invalid")
 
-        current_row += 1
-
-    # end of grid -> 1 path
-    paths_from_pos[(start_row_idx, start_col_idx)] = 1
-    return 1
+    return count_from(start[0], start[1])
 
 
 def part1(input_data: str) -> None:
@@ -109,13 +96,7 @@ def part1(input_data: str) -> None:
 
 def part2(input_data: str) -> None:
     grid = parse_input(input_data)
-
-    start = get_start_pos(grid)
-    if start is None:
-        raise ValueError("Start position not found, input invalid")
-
-    result = count_paths_from_position(grid, start[0], start[1], {})
-
+    result = count_paths_from_position(grid)
     print(result)
 
 
