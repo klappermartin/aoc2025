@@ -24,7 +24,7 @@ def get_n_splits(rows: list[list[str]]) -> int:
 
     start = get_start_pos(rows)
     if start is None:
-        raise ValueError("Start positiion not found, input invalid")
+        raise ValueError("Start position not found, input invalid")
     queued.append(start)
 
     while len(queued) > 0:
@@ -62,11 +62,43 @@ def get_n_splits(rows: list[list[str]]) -> int:
     return result
 
 
-# backtracking solution? -> start backtracking once the followed timeline gets out of bounds -> we can ignore x-OOB
+# memoize the amount of paths that "emerge" from a given start position to speed up brute-force
+def count_paths_from_position(
+    rows: list[list[str]],
+    start_row_idx: int,
+    start_col_idx: int,
+    paths_from_pos: dict[tuple[int, int], int],
+) -> int:
+    # if steps path from position to end are known, skip re-compute
+    if (start_row_idx, start_col_idx) in paths_from_pos:
+        return paths_from_pos[(start_row_idx, start_col_idx)]
 
+    current_row = start_row_idx
+    current_col = start_col_idx
 
-def magic(rows: list[list[str]]):
-    pass
+    # for each row,
+    while current_row < len(rows):
+        grid_value = rows[current_row][current_col]
+
+        # split into 2 paths, recursive call for each
+        # then sum up and memoize paths from here
+        if grid_value == "^":
+            paths_left = count_paths_from_position(
+                rows, current_row + 1, current_col - 1, paths_from_pos
+            )
+            paths_right = count_paths_from_position(
+                rows, current_row + 1, current_col + 1, paths_from_pos
+            )
+
+            result = paths_left + paths_right
+            paths_from_pos[(start_row_idx, start_col_idx)] = result
+            return result
+
+        current_row += 1
+
+    # end of grid -> 1 path
+    paths_from_pos[(start_row_idx, start_col_idx)] = 1
+    return 1
 
 
 def part1(input_data: str) -> None:
@@ -77,7 +109,13 @@ def part1(input_data: str) -> None:
 
 def part2(input_data: str) -> None:
     grid = parse_input(input_data)
-    result = get_n_splits(grid)
+
+    start = get_start_pos(grid)
+    if start is None:
+        raise ValueError("Start position not found, input invalid")
+
+    result = count_paths_from_position(grid, start[0], start[1], {})
+
     print(result)
 
 
@@ -92,9 +130,4 @@ if __name__ == "__main__":
     if args.part == 1:
         part1(input_data)
     else:
-        pass
-
-# trace the beam, start at S. when a spli happens, append new positions to queue
-# breadth first, check which positions are now beams -> add the next positions to queue
-# when checking position, check if it is . -> append below, otherwise append left and right
-# for each append, see if this position was checked -> set of tuples for checked positions
+        part2(input_data)
